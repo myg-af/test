@@ -153,15 +153,26 @@
     })();
   </script>
   <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(regs) {
-        if (regs.length > 0) {
-          Promise.all(regs.map(function(r) { return r.unregister(); })).then(function() {
-            window.location.reload();
-          });
-        }
-      });
-    }
+    // Force Flutter to render inside #app, not the full viewport.
+    // flutter_bootstrap.js does: window._flutter.loader = new Loader()
+    // then immediately calls _flutter.loader.load({...}).
+    // We intercept the .loader setter to wrap load() and inject hostElement.
+    window._flutter = window._flutter || {};
+    Object.defineProperty(window._flutter, 'loader', {
+      configurable: true,
+      get: function() { return this._loaderInst; },
+      set: function(l) {
+        this._loaderInst = l;
+        if (!l) return;
+        var orig = l.load.bind(l);
+        l.load = function(opts) {
+          opts = opts || {};
+          opts.config = opts.config || {};
+          opts.config.hostElement = document.getElementById('app');
+          return orig(opts);
+        };
+      }
+    });
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
